@@ -1,0 +1,27 @@
+[project]
+name = "my-fastapi-app"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Dmytro Bielousov",email = "xperiaroco@gmail.com"}
+]
+readme = "README.md"
+requires-python = "^3.10"
+dependencies = [
+    "fastapi[standard] (>=0.138.1,<0.139.0)",
+    "loguru (>=0.7.3,<0.8.0)",
+    "sqlalchemy (>=2.0.51,<3.0.0)",
+    "asyncpg (>=0.31.0,<0.32.0)",
+    "datetime (>=6.0,<7.0)",
+    "alembic (>=1.18.5,<2.0.0)",
+]
+
+[tool.poetry]
+packages = [{include = "my_fastapi_app", from = "src"}]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.fastapi]
+entrypoint = "app.main:app"

@@ -1,0 +1,94 @@
+services:
+  postgres:
+    image: postgres:17
+    env_file: .env
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d app"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+#  api:
+#    build:
+#      context: .
+#      dockerfile: apps/api/Dockerfile
+#    ports:
+#      - "4000:4000"
+#    env_file: .env
+#    environment:
+#      DATABASE_URL: "postgresql://app:app@postgres:5432/app"
+#      REDIS_URL: "redis://redis:6379"
+#      # ── OpenTelemetry ──────────────────────────────────────────────────
+#      OTEL_SERVICE_NAME: "api"
+#      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
+#      OTEL_TRACES_EXPORTER: "otlp"
+#      OTEL_METRICS_EXPORTER: "otlp"
+#      OTEL_LOG_LEVEL: "info"
+#      OTEL_RESOURCE_ATTRIBUTES: "service.version=0.0.1,deployment.environment=local"
+#    depends_on:
+#      postgres:
+#        condition: service_healthy
+#      redis:
+#        condition: service_healthy
+#      otel-collector:
+#        condition: service_started
+#    restart: unless-stopped
+#    deploy:
+#      resources:
+#        limits:
+#          memory: 256M
+#
+#  worker:
+#    build:
+#      context: .
+#      dockerfile: apps/worker/Dockerfile
+#    ports:
+#      - "9465:9465"    # Prometheus metrics scrape endpoint
+#    env_file: .env
+#    environment:
+#      DATABASE_URL: "postgresql://app:app@postgres:5432/app"
+#      REDIS_URL: "redis://redis:6379"
+#      # ── OpenTelemetry ──────────────────────────────────────────────────
+#      OTEL_SERVICE_NAME: "worker"
+#      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
+#      OTEL_TRACES_EXPORTER: "otlp"
+#      OTEL_METRICS_EXPORTER: "otlp"
+#      OTEL_LOG_LEVEL: "info"
+#      OTEL_RESOURCE_ATTRIBUTES: "service.version=0.0.1,deployment.environment=local"
+#    depends_on:
+#      postgres:
+#        condition: service_healthy
+#      redis:
+#        condition: service_healthy
+#      otel-collector:
+#        condition: service_started
+#    restart: unless-stopped
+#    deploy:
+#      resources:
+#        limits:
+#          memory: 256M
+
+volumes:
+  postgres_data:

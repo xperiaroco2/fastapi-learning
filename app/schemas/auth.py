@@ -7,6 +7,7 @@ class RegisterRequestDTO(BaseRequestDTO):
     password: str
     name: str | None
 
+
 class RegisterResponseDTO(BaseResponseDTO):
     message: str
     user: UserResponseDTO

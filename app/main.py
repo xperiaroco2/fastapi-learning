@@ -3,14 +3,16 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.core import setup_logging, check_db_connection, engine
-from app.routes import auth_router
+from app.core import check_db_connection, engine, setup_logging
+from app.routes import router as auth_router
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await check_db_connection()
     yield logger.info("Server started!")
     await engine.dispose()
+
 
 logger = setup_logging()
 
@@ -27,6 +29,7 @@ app.add_middleware(
 )
 
 app.include_router(auth_router)
+
 
 @app.get("/health")
 async def health_check():

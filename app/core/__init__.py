@@ -13,6 +13,18 @@ from .database import (
 from .database import (
     get_db as get_db,
 )
+from .exception_handlers import (
+    setup_exception_handlers as setup_exception_handlers,
+)
+from .exceptions import (
+    DomainException as DomainException,
+)
+from .exceptions import (
+    EntityAlreadyExistsError as EntityAlreadyExistsError,
+)
+from .exceptions import (
+    EntityNotFoundError as EntityNotFoundError,
+)
 from .logger import (
     setup_logging as setup_logging,
 )

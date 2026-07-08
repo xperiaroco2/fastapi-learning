@@ -1,9 +1,9 @@
 import uuid
 
-from pydantic import BaseModel
+from .base import BaseResponseDTO
 
 
-class UserResponseDTO(BaseModel):
+class UserResponseDTO(BaseResponseDTO):
     id: uuid.UUID
     name: str | None
     email: str

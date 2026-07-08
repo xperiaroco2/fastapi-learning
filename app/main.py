@@ -3,7 +3,13 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.core import check_db_connection, engine, setup_logging
+from app.core import (
+    check_db_connection,
+    engine,
+    setup_exception_handlers,
+    setup_logging,
+)
+from app.core.middleware import CatchAllExceptionsMiddleware
 from app.routes import router as auth_router
 
 
@@ -28,7 +34,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.add_middleware(CatchAllExceptionsMiddleware)
+
 app.include_router(auth_router)
+
+setup_exception_handlers(app)
 
 
 @app.get("/health")

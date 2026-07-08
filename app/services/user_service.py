@@ -1,13 +1,11 @@
 from typing import Annotated
 
-from fastapi import HTTPException
 from fastapi.params import Depends
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from starlette.status import HTTP_400_BAD_REQUEST
 
-from app.core import get_db
+from app.core import EntityAlreadyExistsError, get_db
 from app.models import User
 from app.schemas import RegisterRequestDTO
 
@@ -17,29 +15,24 @@ class UserService:
         self.db = db
 
     async def register_user(self, body: RegisterRequestDTO) -> User:
-        query = select(User).where(User.email == body.email)
-        result = await self.db.execute(query)
-        existing_user: User | None = result.scalars().first()
-
-        # logger.info(query)
-        # logger.info(result)
-        # logger.info(existing_user)
-
-        if existing_user:
-            raise HTTPException(
-                status_code=HTTP_400_BAD_REQUEST,
-                detail="User with this email already exists",
-            )
-
         new_user = User(name=body.name, email=body.email, password_hash="hash_here")
-        # logger.info(new_user)
         self.db.add(new_user)
-        await self.db.commit()
-        await self.db.refresh(new_user)
 
-        logger.info("User successfully created!")
+        try:
+            await self.db.commit()
+            await self.db.refresh(new_user)
 
-        return new_user
+            logger.info(f"User {new_user.email} successfully created!")
+
+            return new_user
+        except IntegrityError as err:
+            await self.db.rollback()
+
+            logger.warning(f"Registration failed: email {body.email} already exists.")
+
+            raise EntityAlreadyExistsError(
+                entity_name="User", field_name="email", field_value=body.email
+            ) from err
 
 
 def get_user_service(db: Annotated[AsyncSession, Depends(get_db)]) -> UserService:

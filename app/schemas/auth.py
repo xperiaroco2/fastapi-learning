@@ -8,9 +8,7 @@ from .user import UserResponseDTO
 
 class RegisterRequestDTO(BaseRequestDTO):
     email: EmailStr
-    password: str = Field(
-        min_length=8, max_length=64, pattern=r"^[A-Za-z\d@$!%*?&#^_\-\+]+$"
-    )
+    password: str = Field(min_length=8, max_length=64, pattern=r"^[A-Za-z\d@$!%*?&#^_\-\+]+$")
     name: str | None = Field(
         min_length=4,
         max_length=40,
@@ -30,3 +28,16 @@ class RegisterRequestDTO(BaseRequestDTO):
 class RegisterResponseDTO(BaseResponseDTO):
     message: str
     user: UserResponseDTO
+
+
+class LoginRequestDTO(BaseRequestDTO):
+    email: EmailStr
+    password: str
+
+
+class LoginResponseDTO(BaseResponseDTO):
+    access_token: str
+
+
+class RefreshSessionResponseDTO(LoginResponseDTO):
+    pass

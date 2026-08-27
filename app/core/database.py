@@ -10,9 +10,7 @@ DATABASE_URL = get_settings().database_url
 
 engine = create_async_engine(DATABASE_URL, echo=True, pool_pre_ping=True)
 
-AsyncSessionLocal = async_sessionmaker(
-    bind=engine, expire_on_commit=False, class_=AsyncSession
-)
+AsyncSessionLocal = async_sessionmaker(bind=engine, expire_on_commit=False, class_=AsyncSession)
 
 
 async def check_db_connection():

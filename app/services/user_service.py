@@ -1,21 +1,29 @@
 from typing import Annotated
 
+from core import (
+    EntityAlreadyExistsError,
+    EntityNotFoundError,
+)
 from fastapi.params import Depends
 from loguru import logger
-from sqlalchemy.exc import IntegrityError
+from models import User
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import EntityAlreadyExistsError, get_db
-from app.models import User
-from app.schemas import RegisterRequestDTO
+from app.core import get_db
+
+
+def get_user_service(db: Annotated[AsyncSession, Depends(get_db)]) -> UserService:
+    return UserService(db)
 
 
 class UserService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def register_user(self, body: RegisterRequestDTO) -> User:
-        new_user = User(name=body.name, email=body.email, password_hash="hash_here")
+    async def create_user(self, name: str | None, email: str, password_hash: str) -> User:
+        new_user = User(name=name, email=email, password_hash=password_hash)
         self.db.add(new_user)
 
         try:
@@ -28,12 +36,21 @@ class UserService:
         except IntegrityError as err:
             await self.db.rollback()
 
-            logger.warning(f"Registration failed: email {body.email} already exists.")
+            logger.warning(f"Registration failed: email {email} already exists.")
 
-            raise EntityAlreadyExistsError(
-                entity_name="User", field_name="email", field_value=body.email
-            ) from err
+            raise EntityAlreadyExistsError(entity_name="User", field_name="email", field_value=email) from err
 
+    async def find_by_email(self, email: str) -> User:
+        stmt = select(User).where(User.email == email)
+        result = await self.db.scalars(stmt)
 
-def get_user_service(db: Annotated[AsyncSession, Depends(get_db)]) -> UserService:
-    return UserService(db)
+        try:
+            user = result.one()
+
+            return user
+        except NoResultFound as err:
+            await self.db.rollback()
+
+            logger.warning(f"User with email {email} not found.")
+
+            raise EntityNotFoundError(entity_name="User", entity_field="email", entity_value=email) from err

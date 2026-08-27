@@ -9,11 +9,6 @@ class CatchAllExceptionsMiddleware(BaseHTTPMiddleware):
         try:
             return await call_next(request)
         except Exception as exc:
-            logger.error(
-                f"System crash on {request.method} {request.url.path}:"
-                f"{exc.__class__.__name__} - {str(exc)}"
-            )
+            logger.error(f"System crash on {request.method} {request.url.path}:{exc.__class__.__name__} - {str(exc)}")
 
-            return JSONResponse(
-                status_code=500, content={"detail": "Internal Server Error"}
-            )
+            return JSONResponse(status_code=500, content={"detail": "Internal Server Error"})

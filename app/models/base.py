@@ -18,10 +18,9 @@ class TimestampMixin:
         nullable=False,
     )
 
-
-class SoftDeleteMixin:
-    deleted_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True),
-        default=None,
-        nullable=True,
-    )
+# class SoftDeleteMixin:
+#     deleted_at: Mapped[datetime | None] = mapped_column(
+#         DateTime(timezone=True),
+#         default=None,
+#         nullable=True,
+#     )

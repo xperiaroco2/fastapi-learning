@@ -1,3 +1,4 @@
+from app.core import EntityAlreadyExistsError, EntityNotFoundError, EntityUnauthorizedError
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
@@ -10,10 +11,13 @@ from starlette.status import (
     HTTP_422_UNPROCESSABLE_CONTENT,
 )
 
-from app.core import EntityAlreadyExistsError, EntityNotFoundError, EntityUnauthorizedError
-
 
 def setup_exception_handlers(app: FastAPI):
+    @app.exception_handler(Exception)
+    async def unhandled_exception_handler(request: Request, exc: Exception):
+        logger.exception("unhandled_error", method=request.method, path=request.url.path)
+        return JSONResponse(status_code=500, content={"detail": "Internal Server Error"})
+
     @app.exception_handler(HTTPException)
     async def global_handler(request: Request, exc: HTTPException):
         return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})

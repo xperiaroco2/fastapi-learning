@@ -1,5 +1,4 @@
-from collections import namedtuple
-from typing import Annotated
+from typing import Annotated, NamedTuple
 
 import jwt
 from core import (
@@ -17,7 +16,7 @@ from schemas import LoginRequestDTO, RegisterRequestDTO
 from services import UserService, get_user_service
 from starlette.status import HTTP_401_UNAUTHORIZED
 
-Tokens = namedtuple("tokens", ["access_token", "refresh_token"])
+Tokens = NamedTuple("tokens", ["access_token", "refresh_token"])
 
 
 def get_auth_service(user_service: Annotated[UserService, Depends(get_user_service)]) -> AuthService:

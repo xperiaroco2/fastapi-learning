@@ -3,7 +3,7 @@ from datetime import UTC, datetime, timedelta
 import bcrypt
 import jwt
 
-from app.core import get_settings
+from app.core.config import get_settings
 
 JWT_ALGORITHM = "HS256"
 

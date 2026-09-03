@@ -1,9 +1,9 @@
 import uuid
 
-from .base import BaseResponseDTO
+from app.schemas.base import BaseResponse
 
 
-class UserResponseDTO(BaseResponseDTO):
+class UserResponse(BaseResponse):
     id: uuid.UUID
     name: str | None
     email: str

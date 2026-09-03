@@ -1,24 +1,25 @@
 from contextlib import asynccontextmanager
 
-from app.core import (
-    check_db_connection,
-    engine,
-    setup_exception_handlers,
-    setup_logging,
-)
-from app.routes import router as auth_router
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+from app.core.database import check_db_connection, engine
+from app.core.exception_handlers import setup_exception_handlers
+from app.core.logger import logger, setup_logging
+from app.core.middlewares import LoggingMiddleware
+from app.routes.auth import auth_router
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await check_db_connection()
-    yield logger.info("Server started!")
+    logger.info("server_started")
+    yield
+    logger.info("server_stopped")
     await engine.dispose()
 
 
-logger = setup_logging()
+setup_logging()
 
 app = FastAPI(lifespan=lifespan)
 
@@ -32,6 +33,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.add_middleware(LoggingMiddleware)
+
 app.include_router(auth_router)
 
 setup_exception_handlers(app)
@@ -39,5 +42,5 @@ setup_exception_handlers(app)
 
 @app.get("/health")
 async def health_check():
-    logger.info("Health check endpoint was called")
+    logger.info("health_check")
     return {"status": "ok"}

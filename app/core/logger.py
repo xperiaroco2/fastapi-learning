@@ -1,10 +1,10 @@
 import sys
 
-from loguru import logger
+from loguru import logger as loguru_logger
 
 
-def setup_logging(is_production: bool = False):
-    logger.remove()
+def setup_logging():
+    loguru_logger.remove()
 
     format_string = (
         "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
@@ -13,11 +13,12 @@ def setup_logging(is_production: bool = False):
         "<level>{message}</level>"
     )
 
-    logger.add(
+    loguru_logger.add(
         sys.stdout,
         format=format_string,
         level="DEBUG",
         colorize=True,
     )
 
-    return logger
+
+logger = loguru_logger

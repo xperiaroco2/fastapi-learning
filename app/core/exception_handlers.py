@@ -1,15 +1,16 @@
-from app.core import EntityAlreadyExistsError, EntityNotFoundError, EntityUnauthorizedError
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from loguru import logger
 from starlette.status import (
     HTTP_401_UNAUTHORIZED,
     HTTP_404_NOT_FOUND,
     HTTP_409_CONFLICT,
     HTTP_422_UNPROCESSABLE_CONTENT,
 )
+
+from app.core.exceptions import BaseAuthError, EntityAlreadyExistsError, EntityNotFoundError
+from app.core.logger import logger
 
 
 def setup_exception_handlers(app: FastAPI):
@@ -30,13 +31,13 @@ def setup_exception_handlers(app: FastAPI):
     async def not_found_handler(request: Request, exc: EntityNotFoundError):
         return JSONResponse(status_code=HTTP_404_NOT_FOUND, content={"detail": exc.message})
 
-    @app.exception_handler(EntityUnauthorizedError)
-    async def unauthorized_handler(request: Request, exc: EntityUnauthorizedError):
+    @app.exception_handler(BaseAuthError)
+    async def unauthorized_handler(request: Request, exc: BaseAuthError):
         return JSONResponse(status_code=HTTP_401_UNAUTHORIZED, content={"detail": exc.message})
 
     @app.exception_handler(RequestValidationError)
     async def validation_handler(request: Request, exc: RequestValidationError):
-        logger.warning(f"Validation failed on {request.url.path}")
+        logger.warning("validation_failed", path=request.url.path)
         return JSONResponse(
             status_code=HTTP_422_UNPROCESSABLE_CONTENT,
             content={

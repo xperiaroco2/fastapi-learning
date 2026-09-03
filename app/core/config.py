@@ -8,13 +8,15 @@ class Settings(BaseSettings):
     redis_url: str
 
     ai_provider: str = "mock"
-    groq_api_key: str
+    groq_api_key: str | None
 
     jwt_secret: str
     jwt_refresh_secret: str
 
     jwt_lifetime_minutes: int
     jwt_refresh_lifetime_seconds: int
+
+    sql_echo: bool = False
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

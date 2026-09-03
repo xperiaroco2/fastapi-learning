@@ -2,11 +2,11 @@ import re
 
 from pydantic import EmailStr, Field, field_validator
 
-from .base import BaseRequestDTO, BaseResponseDTO
-from .user import UserResponseDTO
+from app.schemas.base import BaseRequest, BaseResponse
+from app.schemas.user import UserResponse
 
 
-class RegisterRequestDTO(BaseRequestDTO):
+class RegisterRequest(BaseRequest):
     email: EmailStr
     password: str = Field(min_length=8, max_length=64, pattern=r"^[A-Za-z\d@$!%*?&#^_\-\+]+$")
     name: str | None = Field(
@@ -25,19 +25,19 @@ class RegisterRequestDTO(BaseRequestDTO):
         return value
 
 
-class RegisterResponseDTO(BaseResponseDTO):
+class RegisterResponse(BaseResponse):
     message: str
-    user: UserResponseDTO
+    user: UserResponse
 
 
-class LoginRequestDTO(BaseRequestDTO):
+class LoginRequest(BaseRequest):
     email: EmailStr
     password: str
 
 
-class LoginResponseDTO(BaseResponseDTO):
+class LoginResponse(BaseResponse):
     access_token: str
 
 
-class RefreshSessionResponseDTO(LoginResponseDTO):
+class RefreshSessionResponse(LoginResponse):
     pass

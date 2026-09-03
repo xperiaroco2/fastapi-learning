@@ -1,17 +1,14 @@
 from typing import Annotated
 
-from core import (
-    EntityAlreadyExistsError,
-    EntityNotFoundError,
-)
 from fastapi.params import Depends
-from loguru import logger
-from models import User
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import get_db
+from app.core.database import get_db
+from app.core.exceptions import EntityAlreadyExistsError
+from app.core.logger import logger
+from app.models.user import User
 
 
 def get_user_service(db: Annotated[AsyncSession, Depends(get_db)]) -> UserService:
@@ -30,17 +27,17 @@ class UserService:
             await self.db.commit()
             await self.db.refresh(new_user)
 
-            logger.info(f"User {new_user.email} successfully created!")
+            logger.info("user_created", email=new_user.email)
 
             return new_user
         except IntegrityError as err:
             await self.db.rollback()
 
-            logger.warning(f"Registration failed: email {email} already exists.")
+            logger.warning("registration_failed", reason="already_exists", email=new_user.email)
 
             raise EntityAlreadyExistsError(entity_name="User", field_name="email", field_value=email) from err
 
-    async def find_by_email(self, email: str) -> User:
+    async def find_by_email(self, email: str) -> User | None:
         stmt = select(User).where(User.email == email)
         result = await self.db.scalars(stmt)
 
@@ -48,9 +45,9 @@ class UserService:
             user = result.one()
 
             return user
-        except NoResultFound as err:
+        except NoResultFound:
             await self.db.rollback()
 
-            logger.warning(f"User with email {email} not found.")
+            logger.warning("user_not_found", email=email)
 
-            raise EntityNotFoundError(entity_name="User", entity_field="email", entity_value=email) from err
+            return None

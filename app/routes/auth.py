@@ -1,34 +1,42 @@
 from typing import Annotated
 
-from core import get_settings
 from fastapi import APIRouter, Cookie, Depends, Response
-from schemas import LoginRequestDTO, LoginResponseDTO, RefreshSessionResponseDTO
-from services import AuthService, get_auth_service
 
-from app.schemas import RegisterRequestDTO, RegisterResponseDTO, UserResponseDTO
+from app.core.config import get_settings
+from app.core.dependencies import get_current_user
+from app.models.user import User
+from app.schemas.auth import (
+    LoginRequest,
+    LoginResponse,
+    RefreshSessionResponse,
+    RegisterRequest,
+    RegisterResponse,
+    UserResponse,
+)
+from app.services.auth_service import AuthService, get_auth_service
 
-router = APIRouter(prefix="/auth", tags=["Auth"])
+auth_router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
-@router.post("/register", response_model=RegisterResponseDTO)
+@auth_router.post("/register", response_model=RegisterResponse)
 async def register_user(
-    body: RegisterRequestDTO,
+    body: RegisterRequest,
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
-) -> RegisterResponseDTO:
+) -> RegisterResponse:
     user = await auth_service.register_user(body)
 
-    return RegisterResponseDTO(
-        user=UserResponseDTO.model_validate(user.__dict__),
+    return RegisterResponse(
+        user=UserResponse.model_validate(user),
         message="User registered successfully!",
     )
 
 
-@router.post("/login", response_model=LoginResponseDTO)
+@auth_router.post("/login", response_model=LoginResponse)
 async def login_user(
     response: Response,
-    body: LoginRequestDTO,
+    body: LoginRequest,
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
-) -> LoginResponseDTO:
+) -> LoginResponse:
     access_token, refresh_token = await auth_service.login_user(body)
     jwt_refresh_lifetime_seconds = get_settings().jwt_refresh_lifetime_seconds
 
@@ -41,15 +49,20 @@ async def login_user(
         max_age=jwt_refresh_lifetime_seconds,
     )
 
-    return LoginResponseDTO(access_token=access_token)
+    return LoginResponse(access_token=access_token)
 
 
-@router.post("/refresh", response_model=RefreshSessionResponseDTO)
+@auth_router.post("/refresh", response_model=RefreshSessionResponse)
 async def refresh_session(
     response: Response,
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
     refresh_token: Annotated[str | None, Cookie()] = None,
-) -> RefreshSessionResponseDTO:
+) -> RefreshSessionResponse:
     access_token = await auth_service.renew_access_token(refresh_token)
 
-    return RefreshSessionResponseDTO(access_token=access_token)
+    return RefreshSessionResponse(access_token=access_token)
+
+
+@auth_router.get("/me", response_model=UserResponse)
+async def current_user_profile(current_user: Annotated[User, Depends(get_current_user)]) -> UserResponse:
+    return UserResponse.model_validate(current_user)

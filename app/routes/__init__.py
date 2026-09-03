@@ -1,3 +1,0 @@
-from .auth import (
-    router as router,
-)

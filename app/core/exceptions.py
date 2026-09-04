@@ -29,10 +29,9 @@ class EntityAlreadyExistsError(DomainException):
         super().__init__(self.message)
 
 
-class EntityUnauthorizedError(BaseAuthError):
-    def __init__(self, entity_name: str):
-        self.entity_name = entity_name
-        self.message = f"{entity_name} unauthorized to proceed this action"
+class UnauthenticatedError(BaseAuthError):
+    def __init__(self):
+        self.message = "Not authenticated"
         super().__init__(self.message)
 
 

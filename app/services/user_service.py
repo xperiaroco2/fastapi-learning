@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi.params import Depends
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError, NoResultFound
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -41,13 +41,9 @@ class UserService:
         stmt = select(User).where(User.email == email)
         result = await self.db.scalars(stmt)
 
-        try:
-            user = result.one()
+        user = result.one_or_none()
 
-            return user
-        except NoResultFound:
-            await self.db.rollback()
+        if not user:
+            logger.debug("user_not_found", email=email)
 
-            logger.warning("user_not_found", email=email)
-
-            return None
+        return user

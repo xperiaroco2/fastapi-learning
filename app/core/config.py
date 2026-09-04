@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     redis_url: str
 
     ai_provider: str = "mock"
-    groq_api_key: str | None
+    groq_api_key: str | None = None
 
     jwt_secret: str
     jwt_refresh_secret: str

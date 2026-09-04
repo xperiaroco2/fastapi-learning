@@ -44,7 +44,7 @@ async def login_user(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        secure=True,
+        secure=False,  # For dev purpose
         samesite="strict",
         max_age=jwt_refresh_lifetime_seconds,
     )

@@ -8,7 +8,15 @@ from app.core.logger import logger
 
 class LoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        x_request_id = request.headers.get("X-Request-Id")
-        logger.contextualize(request_id=x_request_id or uuid.uuid4())
-        response = await call_next(request)
-        return response
+        raw = request.headers.get("X-Request-Id")
+        try:
+            request_id = uuid.UUID(raw) if raw else uuid.uuid4()
+        except ValueError:
+            request_id = uuid.uuid4()
+
+        request_id = str(request_id)
+
+        with logger.contextualize(request_id=request_id):
+            response = await call_next(request)
+            response.headers["X-Request-Id"] = request_id
+            return response

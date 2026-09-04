@@ -2,7 +2,7 @@ from typing import Annotated, NamedTuple
 
 from fastapi.params import Depends
 
-from app.core.exceptions import BaseAuthError, InvalidCredentialsError
+from app.core.exceptions import InvalidCredentialsError, UnauthenticatedError
 from app.core.security import (
     check_password,
     decode_refresh_token,
@@ -51,22 +51,24 @@ class AuthService:
         )
 
     async def renew_access_token(self, refresh_token: str | None = None) -> str:
+        error = UnauthenticatedError()
+
         if not refresh_token:
-            raise BaseAuthError("Refresh token required")
+            raise error
 
         payload = decode_refresh_token(refresh_token)
 
         if not payload or payload.get("type") != "refresh":
-            raise BaseAuthError("Invalid token")
+            raise error
 
         user_email = payload.get("sub")
 
         if not user_email:
-            raise BaseAuthError("Invalid token")
+            raise error
 
         user = await self.user_service.find_by_email(email=user_email)
 
         if not user:
-            raise BaseAuthError("Invalid token")
+            raise error
 
         return encode_access_token(user_email)

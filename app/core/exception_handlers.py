@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -18,10 +18,6 @@ def setup_exception_handlers(app: FastAPI):
     async def unhandled_exception_handler(request: Request, exc: Exception):
         logger.exception("unhandled_error", method=request.method, path=request.url.path)
         return JSONResponse(status_code=500, content={"detail": "Internal Server Error"})
-
-    @app.exception_handler(HTTPException)
-    async def global_handler(request: Request, exc: HTTPException):
-        return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 
     @app.exception_handler(EntityAlreadyExistsError)
     async def already_exists_handler(request: Request, exc: EntityAlreadyExistsError):

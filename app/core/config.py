@@ -5,6 +5,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     database_url: str
+    test_database_url: str
+
     redis_url: str
 
     ai_provider: str = "mock"
@@ -14,7 +16,7 @@ class Settings(BaseSettings):
     jwt_refresh_secret: str
 
     jwt_lifetime_minutes: int
-    jwt_refresh_lifetime_seconds: int
+    jwt_refresh_lifetime_minutes: int
 
     sql_echo: bool = False
 

@@ -30,12 +30,12 @@ def encode_access_token(user_email: str) -> str:
 
 def encode_refresh_token(user_email: str) -> str:
     settings = get_settings()
-    jwt_refresh_lifetime_seconds = settings.jwt_refresh_lifetime_seconds
+    jwt_refresh_lifetime_minutes = settings.jwt_refresh_lifetime_minutes
     jwt_refresh_secret = settings.jwt_refresh_secret
     payload = {
         "type": "refresh",
         "sub": user_email,
-        "exp": datetime.now(UTC) + timedelta(seconds=jwt_refresh_lifetime_seconds),
+        "exp": datetime.now(UTC) + timedelta(seconds=jwt_refresh_lifetime_minutes * 60),
     }
     refresh_token = jwt.encode(payload, key=jwt_refresh_secret, algorithm=JWT_ALGORITHM)
     return refresh_token

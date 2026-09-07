@@ -12,3 +12,6 @@ run-migrations:
 
 create-migration:
 	poetry run alembic revision --autogenerate -m "auto"
+
+test:
+	poetry run pytest -v

@@ -38,7 +38,7 @@ async def login_user(
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
 ) -> LoginResponse:
     access_token, refresh_token = await auth_service.login_user(body)
-    jwt_refresh_lifetime_seconds = get_settings().jwt_refresh_lifetime_seconds
+    jwt_refresh_lifetime_minutes = get_settings().jwt_refresh_lifetime_minutes
 
     response.set_cookie(
         key="refresh_token",
@@ -46,7 +46,7 @@ async def login_user(
         httponly=True,
         secure=False,  # For dev purpose
         samesite="strict",
-        max_age=jwt_refresh_lifetime_seconds,
+        max_age=jwt_refresh_lifetime_minutes,
     )
 
     return LoginResponse(access_token=access_token)

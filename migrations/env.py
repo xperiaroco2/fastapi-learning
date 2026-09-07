@@ -66,8 +66,9 @@ async def run_async_migrations() -> None:
     """In this scenario we need to create an Engine
     and associate a connection with the context.
     """
+    url = config.get_main_option("sqlalchemy.url") or get_settings().database_url
     connectable = create_async_engine(
-        get_settings().database_url,
+        url,
         poolclass=pool.NullPool,
     )
 

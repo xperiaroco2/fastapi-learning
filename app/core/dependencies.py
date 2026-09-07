@@ -1,17 +1,18 @@
 from collections.abc import AsyncGenerator
 from typing import Annotated
 
+from fastapi.params import Depends, Header
+
 from app.core.exceptions import UnauthenticatedError
 from app.core.logger import logger
 from app.core.security import decode_access_token
 from app.models.user import User
 from app.services.user_service import UserService, get_user_service
-from fastapi.params import Depends, Header
 
 
 async def get_current_user(
-        user_service: Annotated[UserService, Depends(get_user_service)],
-        authorization: Annotated[str | None, Header()] = None,
+    user_service: Annotated[UserService, Depends(get_user_service)],
+    authorization: Annotated[str | None, Header()] = None,
 ) -> AsyncGenerator[User]:
     guard_error = UnauthenticatedError()
 

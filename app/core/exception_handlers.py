@@ -1,5 +1,4 @@
 from fastapi import FastAPI, Request
-from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.status import (
@@ -33,11 +32,20 @@ def setup_exception_handlers(app: FastAPI):
 
     @app.exception_handler(RequestValidationError)
     async def validation_handler(request: Request, exc: RequestValidationError):
-        logger.warning("validation_failed", path=request.url.path)
+        errors = []
+
+        for error in exc.errors():
+            field = " -> ".join([str(x) for x in error.get("loc", [])])
+            message = error.get("msg")
+
+            errors.append({"field": field, "message": message})
+
+        logger.warning("validation_failed", path=request.url.path, errors=errors)
+
         return JSONResponse(
             status_code=HTTP_422_UNPROCESSABLE_CONTENT,
             content={
                 "detail": "Validation error",
-                "errors": jsonable_encoder(exc.errors()),
+                "errors": errors,
             },
         )

@@ -54,7 +54,6 @@ async def login_user(
 
 @auth_router.post("/refresh", response_model=RefreshSessionResponse)
 async def refresh_session(
-    response: Response,
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
     refresh_token: Annotated[str | None, Cookie()] = None,
 ) -> RefreshSessionResponse:

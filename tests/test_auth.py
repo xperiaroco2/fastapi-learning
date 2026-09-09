@@ -73,14 +73,12 @@ class TestRefresh:
         assert refresh_response.status_code == 200
         assert "accessToken" in refresh_response.json()
 
-
     async def test_without_cookies(self, client):
         await client.post("/auth/register", json=valid_user_body)
         refresh_response = await client.post("/auth/refresh")
         assert refresh_response.status_code == 401
         assert "accessToken" not in refresh_response.json()
         assert refresh_response.json()["detail"] == "Not authenticated"
-
 
     async def test_invalid_token(self, client):
         await client.post("/auth/register", json=valid_user_body)

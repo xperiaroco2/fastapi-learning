@@ -7,7 +7,7 @@ from app.core.exceptions import UnauthenticatedError
 from app.core.logger import logger
 from app.core.security import decode_access_token
 from app.models.user import User
-from app.services.user_service import UserService, get_user_service
+from app.services.user import UserService, get_user_service
 
 
 async def get_current_user(

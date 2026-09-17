@@ -37,7 +37,12 @@ class LoginRequest(BaseRequest):
 
 class LoginResponse(BaseResponse):
     access_token: str
+    user: UserResponse
 
 
-class RefreshSessionResponse(LoginResponse):
-    pass
+class LogoutResponse(BaseResponse):
+    message: str
+
+
+class RefreshSessionResponse(BaseResponse):
+    access_token: str

@@ -8,12 +8,13 @@ from app.models.user import User
 from app.schemas.auth import (
     LoginRequest,
     LoginResponse,
+    LogoutResponse,
     RefreshSessionResponse,
     RegisterRequest,
     RegisterResponse,
     UserResponse,
 )
-from app.services.auth_service import AuthService, get_auth_service
+from app.services.auth import AuthService, get_auth_service
 
 auth_router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -37,7 +38,7 @@ async def login_user(
     body: LoginRequest,
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
 ) -> LoginResponse:
-    access_token, refresh_token = await auth_service.login_user(body)
+    access_token, refresh_token, user = await auth_service.login_user(body)
     jwt_refresh_lifetime_minutes = get_settings().jwt_refresh_lifetime_minutes
 
     response.set_cookie(
@@ -49,7 +50,10 @@ async def login_user(
         max_age=jwt_refresh_lifetime_minutes,
     )
 
-    return LoginResponse(access_token=access_token)
+    return LoginResponse(
+        access_token=access_token,
+        user=UserResponse.model_validate(user),
+    )
 
 
 @auth_router.post("/refresh", response_model=RefreshSessionResponse)
@@ -65,3 +69,10 @@ async def refresh_session(
 @auth_router.get("/me", response_model=UserResponse)
 async def current_user_profile(current_user: Annotated[User, Depends(get_current_user)]) -> UserResponse:
     return UserResponse.model_validate(current_user)
+
+
+@auth_router.post("/logout", response_model=LogoutResponse)
+async def logout_user(response: Response) -> LogoutResponse:
+    response.set_cookie(key="refresh_token", value="", httponly=True, secure=False, samesite="strict", max_age=0)
+
+    return LogoutResponse(message="Logged out successfully")

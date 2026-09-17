@@ -8,7 +8,7 @@ from starlette.status import (
     HTTP_422_UNPROCESSABLE_CONTENT,
 )
 
-from app.core.exceptions import BaseAuthError, EntityAlreadyExistsError, EntityNotFoundError
+from app.core.exceptions import BaseAuthError, ConflictError, EntityAlreadyExistsError, EntityNotFoundError
 from app.core.logger import logger
 
 
@@ -49,3 +49,7 @@ def setup_exception_handlers(app: FastAPI):
                 "errors": errors,
             },
         )
+
+    @app.exception_handler(ConflictError)
+    async def conflict_handler(request: Request, exc: ConflictError):
+        return JSONResponse(status_code=HTTP_409_CONFLICT, content={"detail": exc.message})

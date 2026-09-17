@@ -12,12 +12,13 @@ from app.core.security import (
 )
 from app.models.user import User
 from app.schemas.auth import LoginRequest, RegisterRequest
-from app.services.user_service import UserService, get_user_service
+from app.services.user import UserService, get_user_service
 
 
-class Tokens(NamedTuple):
+class LoginResult(NamedTuple):
     access_token: str
     refresh_token: str
+    user: User
 
 
 def get_auth_service(user_service: Annotated[UserService, Depends(get_user_service)]) -> AuthService:
@@ -34,7 +35,7 @@ class AuthService:
 
         return new_user
 
-    async def login_user(self, body: LoginRequest) -> Tokens:
+    async def login_user(self, body: LoginRequest) -> LoginResult:
         user = await self.user_service.find_by_email(email=body.email)
 
         if not user:
@@ -45,9 +46,10 @@ class AuthService:
         if not is_password_valid:
             raise InvalidCredentialsError()
 
-        return Tokens(
+        return LoginResult(
             access_token=encode_access_token(user_email=user.email),
             refresh_token=encode_refresh_token(user_email=user.email),
+            user=user,
         )
 
     async def renew_access_token(self, refresh_token: str | None = None) -> str:

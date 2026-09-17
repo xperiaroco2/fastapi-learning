@@ -16,4 +16,4 @@ class User(Base, TimestampMixin):
     name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
 
-    decisions: Mapped[list[Decision]] = relationship(back_populates="user")
+    decisions: Mapped[list[Decision]] = relationship(back_populates="user", lazy="raise")

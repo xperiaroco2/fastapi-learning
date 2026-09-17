@@ -1,23 +1,29 @@
 from contextlib import asynccontextmanager
+from typing import Annotated
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from redis.asyncio import Redis
 from starlette.types import Lifespan
 
 from app.core.database import check_db_connection, engine
 from app.core.exception_handlers import setup_exception_handlers
 from app.core.logger import logger, setup_logging
 from app.core.middlewares import LoggingMiddleware
+from app.core.redis_client import close_redis, connect_redis, get_redis
 from app.routes.auth import auth_router
+from app.routes.decision import decision_router
 
 
 @asynccontextmanager
 async def app_init(app: FastAPI):
     await check_db_connection()
+    await connect_redis()
     logger.info("server_started")
     yield
-    logger.info("server_stopped")
     await engine.dispose()
+    await close_redis()
+    logger.info("server_stopped")
 
 
 setup_logging()
@@ -39,6 +45,7 @@ def create_app(lifespan: Lifespan | None = app_init) -> FastAPI:
     new_app.add_middleware(LoggingMiddleware)
 
     new_app.include_router(auth_router)
+    new_app.include_router(decision_router)
 
     setup_exception_handlers(new_app)
 
@@ -46,6 +53,11 @@ def create_app(lifespan: Lifespan | None = app_init) -> FastAPI:
     async def health_check():
         logger.info("health_check")
         return {"status": "ok"}
+
+    @new_app.get("/health/redis")
+    async def redis_health(r: Annotated[Redis, Depends(get_redis)]):
+        pong = await r.ping()
+        return {"redis": pong}
 
     return new_app
 

@@ -25,7 +25,6 @@ class UserService:
 
         try:
             await self.db.commit()
-            await self.db.refresh(new_user)
 
             logger.info("user_created", email=new_user.email)
 

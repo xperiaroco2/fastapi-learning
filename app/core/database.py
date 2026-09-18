@@ -1,10 +1,13 @@
 from collections.abc import AsyncGenerator
 from functools import wraps
 
-from app.core.config import get_settings
-from app.core.logger import logger
+from alembic import command
+from alembic.config import Config
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+from app.core.config import get_settings
+from app.core.logger import logger
 
 DATABASE_URL = get_settings().database_url
 SQL_ECHO = get_settings().sql_echo
@@ -22,6 +25,12 @@ async def check_db_connection():
     except Exception as e:
         logger.error("db_connection_error")
         raise e
+
+
+def run_migrations():
+    alembic_cfg = Config("alembic.ini")
+    alembic_cfg.set_main_option("sqlalchemy.url", get_settings().database_url)
+    command.upgrade(alembic_cfg, "head")
 
 
 async def get_db() -> AsyncGenerator[AsyncSession]:

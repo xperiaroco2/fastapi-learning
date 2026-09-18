@@ -11,15 +11,19 @@ from app.core.exceptions import ConflictError, EntityNotFoundError
 from app.models import Decision, DecisionAnalysisRun
 from app.models.decision import DecisionStatus
 from app.schemas.decision import CreateDecisionRequest
+from app.services.queue import QueueService, get_queue_service
 
 
-def get_decision_service(db: Annotated[AsyncSession, Depends(get_db)]) -> DecisionService:
-    return DecisionService(db)
+def get_decision_service(
+    db: Annotated[AsyncSession, Depends(get_db)], queue: Annotated[QueueService, Depends(get_queue_service)]
+) -> DecisionService:
+    return DecisionService(db, queue)
 
 
 class DecisionService:
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession, queue: QueueService):
         self.db = db
+        self.queue = queue
 
     async def get_all(self, user_id: UUID) -> list[Decision]:
         stmt = select(Decision).where(Decision.user_id == user_id)
@@ -46,13 +50,14 @@ class DecisionService:
             user_id=user_id,
         )
         self.db.add(decision)
+        await self.db.flush()
 
         decision_run = DecisionAnalysisRun(provider=ai_provider, decision_id=decision.id)
         self.db.add(decision_run)
 
         await self.db.commit()
 
-        # TODO: start queue for analysis
+        await self.queue.enqueue_analysis_run(run_id=decision_run.id)
 
         return decision
 
@@ -80,6 +85,6 @@ class DecisionService:
 
         await self.db.commit()
 
-        # TODO: start queue for analysis
+        await self.queue.enqueue_analysis_run(run_id=decision_run.id)
 
         return decision_run.id

@@ -1,14 +1,7 @@
+import asyncio
 from contextlib import asynccontextmanager
 from typing import Annotated
 
-from app.core.config import get_settings
-from app.core.database import check_db_connection, engine
-from app.core.exception_handlers import setup_exception_handlers
-from app.core.logger import logger, setup_logging
-from app.core.middlewares import LoggingMiddleware
-from app.core.redis_client import close_redis, connect_redis, get_redis
-from app.routes.auth import auth_router
-from app.routes.decision import decision_router
 from arq import create_pool
 from arq.connections import RedisSettings
 from fastapi import Depends, FastAPI
@@ -16,16 +9,26 @@ from fastapi.middleware.cors import CORSMiddleware
 from redis.asyncio import Redis
 from starlette.types import Lifespan
 
+from app.core.config import get_settings
+from app.core.database import check_db_connection, engine, run_migrations
+from app.core.exception_handlers import setup_exception_handlers
+from app.core.logger import logger, setup_logging
+from app.core.middlewares import LoggingMiddleware
+from app.core.redis_client import close_redis, connect_redis, get_redis
+from app.routes.auth import auth_router
+from app.routes.decision import decision_router
+
 
 @asynccontextmanager
 async def app_init(app: FastAPI):
     await check_db_connection()
     await connect_redis()
-    app.state.redis_pool = await create_pool(RedisSettings.from_dsn(get_settings().redis_url))
+    await asyncio.to_thread(run_migrations)
+    app.state.arq_pool = await create_pool(RedisSettings.from_dsn(get_settings().redis_url))
     logger.info("server_started")
     yield
     await engine.dispose()
-    await app.state.redis_pool.close()
+    await app.state.arq_pool.close()
     await close_redis()
     logger.info("server_stopped")
 

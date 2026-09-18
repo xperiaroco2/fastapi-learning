@@ -43,7 +43,7 @@ class DecisionAnalysisRun(Base, TimestampMixin):
 
     status: Mapped[DecisionStatus] = mapped_column(SQLEnum(DecisionStatus), default=DecisionStatus.PENDING, index=True)
     provider: Mapped[str] = mapped_column(String(255), nullable=False)
-    result_json: Mapped[JSON] = mapped_column(JSON, nullable=True)
+    result_json: Mapped[dict[str, str]] = mapped_column(JSON, nullable=True)
     category_text: Mapped[str] = mapped_column(String(255), nullable=True, index=True)
     biases_text: Mapped[list[str]] = mapped_column(ARRAY(String(255)), nullable=False, default=list)
     error: Mapped[str] = mapped_column(Text, nullable=True)

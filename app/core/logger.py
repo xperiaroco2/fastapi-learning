@@ -18,6 +18,8 @@ def setup_logging():
         format=format_string,
         level="DEBUG",
         colorize=True,
+        backtrace=False,
+        diagnose=False,
     )
 
 

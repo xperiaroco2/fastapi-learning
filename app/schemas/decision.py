@@ -2,6 +2,7 @@ from uuid import UUID
 
 from pydantic import UUID4, Field
 
+from app.models.decision import DecisionStatus
 from app.schemas.base import BaseRequest, BaseResponse
 
 
@@ -10,6 +11,7 @@ class DecisionResponse(BaseResponse):
     situation: str
     chosen_decision: str
     personal_reasoning: str | None
+    status: DecisionStatus
 
 
 class RerunDecisionResponse(BaseResponse):

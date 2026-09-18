@@ -44,6 +44,9 @@ services:
         - "pypi.org:167.82.48.223"
     ports:
       - "8000:8000"
+    volumes:
+      - .:/app
+      - /app/.venv
     env_file:
      - .env
      - .env.docker
@@ -57,36 +60,32 @@ services:
       resources:
         limits:
           memory: 256M
-#
-#  worker:
-#    build:
-#      context: .
-#      dockerfile: apps/worker/Dockerfile
-#    ports:
-#      - "9465:9465"    # Prometheus metrics scrape endpoint
-#    env_file: .env
-#    environment:
-#      DATABASE_URL: "postgresql://app:app@postgres:5432/app"
-#      REDIS_URL: "redis://redis:6379"
-#      # ── OpenTelemetry ──────────────────────────────────────────────────
-#      OTEL_SERVICE_NAME: "worker"
-#      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
-#      OTEL_TRACES_EXPORTER: "otlp"
-#      OTEL_METRICS_EXPORTER: "otlp"
-#      OTEL_LOG_LEVEL: "info"
-#      OTEL_RESOURCE_ATTRIBUTES: "service.version=0.0.1,deployment.environment=local"
-#    depends_on:
-#      postgres:
-#        condition: service_healthy
-#      redis:
-#        condition: service_healthy
-#      otel-collector:
-#        condition: service_started
-#    restart: unless-stopped
-#    deploy:
-#      resources:
-#        limits:
-#          memory: 256M
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      extra_hosts:
+        - "files.pythonhosted.org:167.82.48.223"
+        - "pypi.org:167.82.48.223"
+    command: ["watchfiles", "arq app.worker.settings.WorkerSettings", "/app"]
+    volumes:
+      - .:/app
+      - /app/.venv
+    healthcheck:
+      test: ["NONE"]
+    env_file:
+     - .env
+     - .env.docker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
 volumes:
   postgres_data:

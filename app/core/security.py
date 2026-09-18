@@ -2,10 +2,13 @@ from datetime import UTC, datetime, timedelta
 
 import bcrypt
 import jwt
+from fastapi.security import HTTPBearer
 
 from app.core.config import get_settings
 
 JWT_ALGORITHM = "HS256"
+
+security = HTTPBearer()
 
 
 def hash_password(password: str) -> str:

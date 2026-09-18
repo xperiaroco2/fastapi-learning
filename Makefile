@@ -15,3 +15,6 @@ create-migration:
 
 test:
 	poetry run pytest -v
+
+worker:
+	poetry run arq app.worker.settings.WorkerSettings

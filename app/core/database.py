@@ -1,10 +1,10 @@
 from collections.abc import AsyncGenerator
-
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from functools import wraps
 
 from app.core.config import get_settings
 from app.core.logger import logger
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 DATABASE_URL = get_settings().database_url
 SQL_ECHO = get_settings().sql_echo
@@ -27,3 +27,13 @@ async def check_db_connection():
 async def get_db() -> AsyncGenerator[AsyncSession]:
     async with AsyncSessionLocal() as db_session:
         yield db_session
+
+
+def inject_session(func):
+    @wraps(func)
+    async def wrapper(ctx, *args, **kwargs):
+        async with AsyncSessionLocal() as db_session:
+            kwargs["session"] = db_session
+            return await func(ctx, *args, **kwargs)
+
+    return wrapper

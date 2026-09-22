@@ -3,3 +3,6 @@
 .venv
 .idea
 __pycache__
+
+# Track the teaching contract in this repo. ~/.gitignore_global ignores AGENTS.md for work projects.
+!AGENTS.md

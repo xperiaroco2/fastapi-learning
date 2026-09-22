@@ -1,20 +1,20 @@
 dev:
-	poetry run fastapi dev
+	uv run fastapi dev
 
 lint-fix:
-	poetry run ruff check --fix . && poetry run ruff format .
+	uv run ruff check --fix . && uv run ruff format .
 
 types-check:
-	poetry run pyright .
+	uv run pyright .
 
 run-migrations:
-	poetry run alembic upgrade head
+	uv run alembic upgrade head
 
 create-migration:
-	poetry run alembic revision --autogenerate -m "auto"
+	uv run alembic revision --autogenerate -m "auto"
 
 test:
-	poetry run pytest -v
+	uv run pytest -v
 
 worker:
-	poetry run arq app.worker.settings.WorkerSettings
+	uv run arq app.worker.settings.WorkerSettings

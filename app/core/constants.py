@@ -1,2 +1,12 @@
+from enum import Enum
+
+
+class CaseStatus(Enum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
 class TaskNames:
-    DECISION_ANALYSIS = "decision_analysis_job"
+    ANALYSE_CASE = "analyse_case_job"

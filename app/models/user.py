@@ -6,7 +6,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base, TimestampMixin
 
 if TYPE_CHECKING:
-    from app.models.decision import Decision
+    from app.models.case import Case
 
 
 class User(Base, TimestampMixin):
@@ -16,4 +16,4 @@ class User(Base, TimestampMixin):
     name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
 
-    decisions: Mapped[list[Decision]] = relationship(back_populates="user", lazy="raise")
+    cases: Mapped[list[Case]] = relationship(back_populates="teacher", lazy="raise")

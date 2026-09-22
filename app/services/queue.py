@@ -16,7 +16,5 @@ class QueueService:
     def __init__(self, arq: ArqRedis):
         self.arq = arq
 
-    async def enqueue_analysis_run(self, run_id: UUID):
-        await self.arq.enqueue_job(
-            TaskNames.DECISION_ANALYSIS, run_id, _job_id=f"{TaskNames.DECISION_ANALYSIS}_{run_id}"
-        )
+    async def enqueue_analyze_case(self, run_id: UUID):
+        await self.arq.enqueue_job(TaskNames.ANALYSE_CASE, run_id, _job_id=f"{TaskNames.ANALYSE_CASE}_{run_id}")

@@ -16,7 +16,7 @@ from app.core.logger import logger, setup_logging
 from app.core.middlewares import LoggingMiddleware
 from app.core.redis_client import close_redis, connect_redis, get_redis
 from app.routes.auth import auth_router
-from app.routes.decision import decision_router
+from app.routes.case import case_router
 
 
 @asynccontextmanager
@@ -52,7 +52,7 @@ def create_app(lifespan: Lifespan | None = app_init) -> FastAPI:
     new_app.add_middleware(LoggingMiddleware)
 
     new_app.include_router(auth_router)
-    new_app.include_router(decision_router)
+    new_app.include_router(case_router)
 
     setup_exception_handlers(new_app)
 

@@ -6,9 +6,16 @@ from starlette.status import (
     HTTP_404_NOT_FOUND,
     HTTP_409_CONFLICT,
     HTTP_422_UNPROCESSABLE_CONTENT,
+    HTTP_500_INTERNAL_SERVER_ERROR,
 )
 
-from app.core.exceptions import BaseAuthError, ConflictError, EntityAlreadyExistsError, EntityNotFoundError
+from app.core.exceptions import (
+    AnalyseFailedError,
+    BaseAuthError,
+    ConflictError,
+    EntityAlreadyExistsError,
+    EntityNotFoundError,
+)
 from app.core.logger import logger
 
 
@@ -53,3 +60,7 @@ def setup_exception_handlers(app: FastAPI):
     @app.exception_handler(ConflictError)
     async def conflict_handler(request: Request, exc: ConflictError):
         return JSONResponse(status_code=HTTP_409_CONFLICT, content={"detail": exc.message})
+
+    @app.exception_handler(AnalyseFailedError)
+    async def analyze_failed_handler(request: Request, exc: ConflictError):
+        return JSONResponse(status_code=HTTP_500_INTERNAL_SERVER_ERROR, content={"detail": exc.message})

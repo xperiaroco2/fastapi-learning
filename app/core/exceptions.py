@@ -45,3 +45,9 @@ class ConflictError(DomainException):
     def __init__(self, message: str):
         self.message = message
         super().__init__(self.message)
+
+
+class AnalyseFailedError(DomainException):
+    def __init__(self):
+        self.message = "Analyse run failed"
+        super().__init__(self.message)

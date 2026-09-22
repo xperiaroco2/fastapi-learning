@@ -8,7 +8,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U app -d app"]
+      test: [ "CMD-SHELL", "pg_isready -U app -d app" ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -17,16 +17,28 @@ services:
         limits:
           memory: 256M
 
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin2
+    environment:
+      PGADMIN_DEFAULT_EMAIL: d.belousov@thedigital.gov.ua
+      PGADMIN_DEFAULT_PASSWORD: password
+      PGADMIN_DISABLE_POSTFIX: True
+    ports:
+      - "54320:80"
+    depends_on:
+      - postgres
+
   redis:
     image: redis:7
     ports:
       - "6379:6379"
     command: redis-server --appendonly yes
-#    volumes:
-#      - redis_data:/data
+    #    volumes:
+    #      - redis_data:/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -48,8 +60,8 @@ services:
       - .:/app
       - /app/.venv
     env_file:
-     - .env
-     - .env.docker
+      - .env
+      - .env.docker
     depends_on:
       postgres:
         condition: service_healthy
@@ -67,15 +79,15 @@ services:
       extra_hosts:
         - "files.pythonhosted.org:167.82.48.223"
         - "pypi.org:167.82.48.223"
-    command: ["watchfiles", "arq app.worker.settings.WorkerSettings", "/app"]
+    command: [ "watchfiles", "arq app.worker.settings.WorkerSettings", "/app" ]
     volumes:
       - .:/app
       - /app/.venv
     healthcheck:
-      test: ["NONE"]
+      test: [ "NONE" ]
     env_file:
-     - .env
-     - .env.docker
+      - .env
+      - .env.docker
     depends_on:
       postgres:
         condition: service_healthy

@@ -46,30 +46,41 @@ He may explicitly ask you to write a non-application file (this contract, a diag
 |---|---|---|
 | API | FastAPI, pydantic-settings, async SQLAlchemy 2, asyncpg, Alembic | In use |
 | Jobs | arq + Redis | In use. Not Celery |
-| Inference | Groq (Llama 3) through LangChain | Only `GroqProvider` may import Groq or LangChain |
-| Contract | One `AiProvider`, chosen by `AI_PROVIDER=mock\|groq` | The job does not branch on the provider name |
-| Output | One Pydantic model | Mock and Groq return the same type |
-| Vectors | Qdrant | Postgres stays the source of truth. Qdrant stores vectors and ids. Searches filter by the owner. No pgvector |
-| Agent | LangGraph | Only after one real model call and retrieval both work |
+| Inference | Groq through LangChain | In use. Only `app/ai/groq.py` may import Groq or LangChain |
+| Contract | `AIProvider.analyse_case`, chosen by `AI_PROVIDER=mock\|groq` | In use. The job does not branch on the provider name |
+| Output | `CaseAnalysisResult` | In use. Mock and Groq return the same type. Groq uses `with_structured_output` |
+| Vectors | Qdrant | Open slice. Postgres stays the source of truth. No pgvector |
+| Agent | LangGraph | Only after this retrieval slice returns chunks the analyst actually uses |
 | Graph RAG | Neo4j | Only after vector RAG is demonstrable |
-| Embeddings | A provider other than Groq | Separate module from chat completions |
-| Traces | Arize Phoenix | `PHOENIX_COLLECTOR_ENDPOINT`. Registered once |
+| Embeddings | A client other than `ChatGroq` | Separate module from chat completions |
+| Traces | Arize Phoenix | In use. `register(..., auto_instrument=True)` in the worker. `PHOENIX_COLLECTOR_ENDPOINT` |
 | Later | LlamaIndex, PySpark, Pandas, Unsloth | Not the open slice |
 
-Settings already include `ai_provider` (default `mock`) and `groq_api_key`. Add `GROQ_MODEL` with the Groq client. The model name lives in settings, not in the prompt string.
+Settings in use: `ai_provider` (default `mock`), `groq_api_key`, `groq_model`, `phoenix_collector_endpoint`. The model name lives in settings, not in the prompt string. He chose not to add tests for the provider slice. Do not block later slices on backfilling them unless he asks.
+
+## In place
+
+`analyse_case_job` calls `AnalyseService.analyse_case_run`. The service loads the run, case, and student, sets `PROCESSING`, calls `AIProvider.analyse_case(description, academic_profile, run_id, user_id)`, then commits `COMPLETED` or `FAILED`. `get_ai_provider()` is cached and imports `GroqAIProvider` only on the `groq` branch.
+
+`handle_llm_errors` maps failures to `AnalyseFailedError` reasons: `invalid_output`, `unavailable`, `rejected`, `unknown_error`. The service stores that reason on `run.error` and logs it with `logger.exception` inside the `except`. A missing run is `invalid_run` and is raised before there is a row to mark `FAILED`.
+
+Phoenix auto-instrumentation traces LangChain calls in the worker. A mock run produces no span. Inside Compose the collector is `http://phoenix:6006`. `run_id` and `user_id` go into LangChain metadata as strings.
 
 ## Open slice
 
-`AnalyseService.analyse_case_run` still sleeps and writes a hardcoded `hypothesis` and `action_plan`. `AI_PROVIDER` is copied onto `AnalysisRun.provider` and then ignored. There is no provider module, no prompt, and no LangChain dependency.
+Methodology retrieval. The case analyst stays one method. Qdrant does not move into `groq.py`, and `AIProvider` does not gain a search method.
 
-The open slice is that provider, and nothing past it:
+The corpus is shared educational methodology, not the student's `academic_profile` and not a per-teacher private store. Postgres remains the source of cases, students, and runs. Qdrant stores chunk text, vectors, and ids. Embeddings live in their own client.
 
-1. A Pydantic result aligned with the columns on `AnalysisRun`. Re-read the model before naming fields.
-2. `AiProvider`: one async method. `MockProvider` returns a valid object. `GroqProvider` sends one prompt and parses structured output (LangChain `with_structured_output`, or the current equivalent). Confirm the Groq structured-output docs for the chosen Llama 3 model.
-3. The service sets `PROCESSING`, calls the provider, then sets `COMPLETED` and `finished_at`. A provider failure, including unparseable model output, sets `FAILED` and `error`, and still commits. A row left in `PROCESSING` is a bug.
-4. Tests live in `tests/`, use the mock only, and cover the success transition and the failure path.
+Algorithm:
 
-Qdrant starts only after this slice is reviewed.
+1. Add a `app/retrieval/` package: one search port, one Qdrant module, one embedding module. Other code imports the port and a factory.
+2. Index a small methodology corpus. A function or script is enough. No methodology CRUD API in this slice.
+3. On a case run, search with the description and pass the returned chunks into the existing analyst the same way `academic_profile` is passed. The mock ignores them.
+4. The Groq prompt may use a chunk only when it bears on the description. No chunks, or none that bear on it: the current generic-advice path still applies.
+5. From inside Compose, the Qdrant URL uses the service hostname, the same way Redis is `redis` and Phoenix is `phoenix`.
+
+Gate before LangGraph: one Groq trace whose chain input contains a retrieved chunk, and one description that matches nothing and still finishes `COMPLETED`. A graph is the slice after that, and only if the flow needs a branch this single call cannot express.
 
 ## Repo conventions
 
@@ -81,7 +92,7 @@ Qdrant starts only after this slice is reviewed.
 - Log structured events: a stable event name plus keyword fields.
 - He manages git. Do not stage, commit, branch, or push unless he asks.
 - Prefix shell commands with `rtk`.
-- Docker is Postgres, Redis, and the API. Inside the API container, Redis is `redis:6379`. arq must use `RedisSettings.from_dsn(get_settings().redis_url)`. Bare `RedisSettings()` points at `localhost` and fails in that container. Settings imports are `from app.core.config import get_settings`.
+- Docker is Postgres, Redis, Phoenix, the API, and the worker. Inside Compose, Redis is `redis:6379` and Phoenix is `http://phoenix:6006`. arq must use `RedisSettings.from_dsn(get_settings().redis_url)`. Bare `RedisSettings()` points at `localhost` and fails in that container. Settings imports are `from app.core.config import get_settings`.
 
 ## Review checklist for a model call
 
@@ -89,4 +100,4 @@ Qdrant starts only after this slice is reviewed.
 - Does every failure become `FAILED` with a stored reason, then a commit?
 - Does the prompt contain the case and the student facts it needs, and nothing else stuffed in "just in case"?
 - Are the API key and the model name read from settings?
-- Is there a Phoenix span for the live call, and do the tests stay on the mock?
+- Does a Groq run show a LangChain span in Phoenix, and does a mock run show none?

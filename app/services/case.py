@@ -13,17 +13,21 @@ from app.models.case import Case
 from app.models.run import AnalysisRun
 from app.schemas.case import CreateCaseRequest
 from app.services.queue import QueueService, get_queue_service
+from app.services.student import StudentService, get_student_service
 
 
 def get_case_service(
-    db: Annotated[AsyncSession, Depends(get_db)], queue: Annotated[QueueService, Depends(get_queue_service)]
+    db: Annotated[AsyncSession, Depends(get_db)],
+    student_service: Annotated[StudentService, Depends(get_student_service)],
+    queue: Annotated[QueueService, Depends(get_queue_service)],
 ) -> CaseService:
-    return CaseService(db, queue)
+    return CaseService(db, student_service, queue)
 
 
 class CaseService:
-    def __init__(self, db: AsyncSession, queue: QueueService):
+    def __init__(self, db: AsyncSession, student_service: StudentService, queue: QueueService):
         self.db = db
+        self.student_service = student_service
         self.queue = queue
 
     async def get_all(self, user_id: UUID) -> list[Case]:
@@ -42,6 +46,8 @@ class CaseService:
         return case
 
     async def create(self, body: CreateCaseRequest, user_id: UUID) -> Case:
+        await self.student_service.get_by_id(body.student_id)
+
         ai_provider = get_settings().ai_provider
 
         case = Case(
@@ -57,7 +63,7 @@ class CaseService:
 
         await self.db.commit()
 
-        await self.queue.enqueue_analyze_case(run_id=case_run.id)
+        await self.queue.enqueue_analyze_case(run_id=case_run.id, user_id=user_id)
 
         return case
 
@@ -83,6 +89,6 @@ class CaseService:
 
         await self.db.commit()
 
-        await self.queue.enqueue_analyze_case(run_id=case_run.id)
+        await self.queue.enqueue_analyze_case(run_id=case_run.id, user_id=user_id)
 
         return case_run.id

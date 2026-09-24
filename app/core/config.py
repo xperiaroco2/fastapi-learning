@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -10,7 +11,8 @@ class Settings(BaseSettings):
     redis_url: str
 
     ai_provider: str = "mock"
-    groq_api_key: str | None = None
+    groq_api_key: SecretStr | None = None
+    groq_model: str | None = None
 
     jwt_secret: str
     jwt_refresh_secret: str
@@ -19,6 +21,8 @@ class Settings(BaseSettings):
     jwt_refresh_lifetime_minutes: int
 
     sql_echo: bool = False
+
+    phoenix_collector_endpoint: str
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

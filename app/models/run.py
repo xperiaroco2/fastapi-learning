@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlalchemy import JSON, Boolean, DateTime, Enum, ForeignKey, Index, Integer, String, Text, Uuid, desc
+from sqlalchemy import ARRAY, Boolean, DateTime, Enum, ForeignKey, Index, Integer, String, Text, Uuid, desc
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.constants import CaseStatus
@@ -17,7 +17,7 @@ class AnalysisRun(Base, TimestampMixin):
     __tablename__ = "analysis_runs"
 
     hypothesis: Mapped[str | None] = mapped_column(Text, nullable=True)
-    action_plan: Mapped[dict[str, str] | None] = mapped_column(JSON, nullable=True)
+    action_plan: Mapped[list[str] | None] = mapped_column(ARRAY(Text), nullable=True)
     grounded: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
 
     status: Mapped[CaseStatus] = mapped_column(Enum(CaseStatus), default=CaseStatus.PENDING, index=True)

@@ -47,6 +47,16 @@ services:
         limits:
           memory: 128M
 
+  phoenix:
+    image: arizephoenix/phoenix:latest
+    container_name: arize_phoenix
+    ports:
+      - "6006:6006"
+    env_file:
+      - .env
+      - .env.docker
+    restart: unless-stopped
+
   api:
     build:
       context: .

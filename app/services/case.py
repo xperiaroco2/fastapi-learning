@@ -4,6 +4,7 @@ from uuid import UUID
 from fastapi.params import Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.config import get_settings
 from app.core.constants import CaseStatus
@@ -31,13 +32,13 @@ class CaseService:
         self.queue = queue
 
     async def get_all(self, user_id: UUID) -> list[Case]:
-        stmt = select(Case).where(Case.teacher_id == user_id)
+        stmt = select(Case).where(Case.teacher_id == user_id).options(selectinload(Case.runs))
         cases = (await self.db.scalars(stmt)).all()
 
         return list(cases)
 
     async def get_by_id(self, case_id: UUID, user_id: UUID) -> Case:
-        stmt = select(Case).where(Case.id == case_id, Case.teacher_id == user_id)
+        stmt = select(Case).where(Case.id == case_id, Case.teacher_id == user_id).options(selectinload(Case.runs))
         case = await self.db.scalar(stmt)
 
         if not case:

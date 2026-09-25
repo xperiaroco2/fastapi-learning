@@ -1,16 +1,19 @@
 FROM python:3.14-slim
 
-ENV POETRY_VIRTUALENVS_IN_PROJECT=1 \
-    PATH="/app/.venv/bin:$PATH"
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 WORKDIR /app
 
-RUN pip install poetry
+ENV UV_COMPILE_BYTECODE=1 \
+    PATH="/app/.venv/bin:$PATH"
 
-COPY pyproject.toml poetry.lock ./
-RUN poetry install --only main --no-root --no-ansi
+COPY pyproject.toml uv.lock ./
+
+RUN uv sync --frozen --no-dev --no-install-project
 
 COPY . .
+
+RUN uv sync --frozen --no-dev
 
 RUN useradd --create-home --uid 1000 appuser && chown -R appuser:appuser /app
 USER appuser

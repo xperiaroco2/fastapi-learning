@@ -28,6 +28,7 @@ def upgrade() -> None:
         existing_type=postgresql.JSON(astext_type=sa.Text()),
         type_=sa.ARRAY(sa.Text()),
         existing_nullable=True,
+        postgresql_using="action_plan::text::text[]",
     )
     # ### end Alembic commands ###
 

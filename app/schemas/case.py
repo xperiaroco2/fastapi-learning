@@ -4,6 +4,7 @@ from pydantic import UUID4, Field
 
 from app.core.constants import CaseStatus
 from app.schemas.base import BaseRequest, BaseResponse
+from app.schemas.run import AnalyseRunResponse
 
 
 class CaseResponse(BaseResponse):
@@ -12,6 +13,7 @@ class CaseResponse(BaseResponse):
     teacher_id: UUID
     student_id: UUID
     status: CaseStatus
+    runs: list[AnalyseRunResponse] = []
 
 
 class RerunCaseResponse(BaseResponse):

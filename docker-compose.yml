@@ -57,6 +57,16 @@ services:
       - .env.docker
     restart: unless-stopped
 
+  qdrant:
+    image: qdrant/qdrant
+    container_name: qdrant
+    ports:
+      - "6333:6333"
+    env_file:
+      - .env
+      - .env.docker
+    restart: unless-stopped
+
   api:
     build:
       context: .

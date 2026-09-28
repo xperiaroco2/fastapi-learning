@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class CaseStatus(Enum):
+class CaseStatus(StrEnum):
     PENDING = "pending"
     PROCESSING = "processing"
     COMPLETED = "completed"

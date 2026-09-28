@@ -10,9 +10,9 @@ class CaseAnalysisResult(BaseModel):
     grounded: bool = Field(default=False)
 
 
-class AIProvider(ABC):
+class AIChat(ABC):
     @abstractmethod
     async def analyse_case(
-        self, description: str, academic_profile: str, run_id: UUID, user_id: UUID
+        self, description: str, academic_profile: str, run_id: UUID, user_id: UUID, documents_info: list[str]
     ) -> CaseAnalysisResult:
         pass

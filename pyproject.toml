@@ -26,7 +26,6 @@ dependencies = [
     "arize-phoenix-otel>=0.17.1",
     "openinference-instrumentation-langchain>=0.1.76",
     "langchain-qdrant>=1.1.0",
-    "langchain-openai>=1.6.6",
     "requests>=2.34.2",
     "beautifulsoup4==4.15.0",
     "llama-cloud>=2.16.0",

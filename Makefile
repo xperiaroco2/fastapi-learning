@@ -5,7 +5,7 @@ lint-fix:
 	uv run ruff check --fix . && uv run ruff format .
 
 types-check:
-	uv run pyright .
+	uvx pyright .
 
 run-migrations:
 	uv run alembic upgrade head

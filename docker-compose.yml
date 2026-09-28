@@ -91,7 +91,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 256M
+          memory: 1024M
   worker:
     build:
       context: .
@@ -117,7 +117,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 256M
+          memory: 1024M
 
 volumes:
   postgres_data:

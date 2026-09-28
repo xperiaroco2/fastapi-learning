@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     redis_url: str
 
     ai_provider: str = "mock"
+    ai_retrieval: str = "mock"
+
     groq_api_key: SecretStr | None = None
     groq_model: str | None = None
 
@@ -23,6 +25,8 @@ class Settings(BaseSettings):
     sql_echo: bool = False
 
     phoenix_collector_endpoint: str
+
+    vector_database_url: str
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

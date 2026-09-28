@@ -18,7 +18,7 @@ A teacher intervention engine:
 
 1. A teacher submits an observation about a student (a `Case`).
 2. Postgres holds the durable facts: users, students, cases, analysis runs, and later grades and attendance.
-3. A vector store supplies educational methodologies (RAG). Not built yet.
+3. A vector store supplies educational methodologies (RAG). The corpus is indexed. The advisor does not query it yet.
 4. A stateful agent turns that context into a root-cause hypothesis and a personalized action plan. Not built yet.
 
 Nouns already in the code: `User` (the teacher), `Student`, `Case`, `AnalysisRun`, `CaseStatus` (`pending`, `processing`, `completed`, `failed`). The worker entry is `analyse_case_job`, which calls `AnalyseService.analyse_case_run`.
@@ -49,10 +49,10 @@ He may explicitly ask you to write a non-application file (this contract, a diag
 | Inference | Groq through LangChain | In use. Only `app/ai/groq.py` may import Groq or LangChain |
 | Contract | `AIProvider.analyse_case`, chosen by `AI_PROVIDER=mock\|groq` | In use. The job does not branch on the provider name |
 | Output | `CaseAnalysisResult` | In use. Mock and Groq return the same type. Groq uses `with_structured_output` |
-| Vectors | Qdrant | Open slice. Postgres stays the source of truth. No pgvector |
+| Vectors | Qdrant collection `my_knowledge` | Indexed by `scripts/ingest_manual.py`. The advisor does not query it yet. No pgvector |
 | Agent | LangGraph | Only after this retrieval slice returns chunks the analyst actually uses |
 | Graph RAG | Neo4j | Only after vector RAG is demonstrable |
-| Embeddings | A client other than `ChatGroq` | Separate module from chat completions |
+| Embeddings | `sentence-transformers/all-MiniLM-L6-v2` via HuggingFace | In use for ingest. Query-time search must use this same model. Not `ChatGroq`. `langchain-openai` is installed and is not the embedder for this collection |
 | Traces | Arize Phoenix | In use. `register(..., auto_instrument=True)` in the worker. `PHOENIX_COLLECTOR_ENDPOINT` |
 | Later | LlamaIndex, PySpark, Pandas, Unsloth | Not the open slice |
 
@@ -68,17 +68,20 @@ Phoenix auto-instrumentation traces LangChain calls in the worker. A mock run pr
 
 ## Open slice
 
-Methodology retrieval. The case analyst stays one method. Qdrant does not move into `groq.py`, and `AIProvider` does not gain a search method.
+Use the existing chunks in the advisor. Do not re-index, and do not add a methodology API. The case analyst stays one method. Qdrant does not move into `groq.py`, and `AIProvider` does not gain a search method.
 
-The corpus is shared educational methodology, not the student's `academic_profile` and not a per-teacher private store. Postgres remains the source of cases, students, and runs. Qdrant stores chunk text, vectors, and ids. Embeddings live in their own client.
+`scripts/ingest_manual.py` already stores Markdown chunks in Qdrant collection `my_knowledge`. Chunk size is 1000 with overlap 200. Payload fields are `source_file`, `ingested_at`, `category=education`, and `chunk_id`. Embeddings are `HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")`. A query embedded with any other model, including OpenAI, will not match this collection.
+
+Compose reaches Qdrant at `VECTOR_DATABASE_URL=http://qdrant:6333` from `.env.docker`. `Settings` does not read that variable yet. The worker memory limit is 256 MB. Loading this embedding model inside that limit will be killed. Raise the worker limit before running search in Compose.
+
+The corpus is shared educational methodology, not the student's `academic_profile` and not a per-teacher private store. Postgres remains the source of cases, students, and runs.
 
 Algorithm:
 
-1. Add a `app/retrieval/` package: one search port, one Qdrant module, one embedding module. Other code imports the port and a factory.
-2. Index a small methodology corpus. A function or script is enough. No methodology CRUD API in this slice.
-3. On a case run, search with the description and pass the returned chunks into the existing analyst the same way `academic_profile` is passed. The mock ignores them.
-4. The Groq prompt may use a chunk only when it bears on the description. No chunks, or none that bear on it: the current generic-advice path still applies.
-5. From inside Compose, the Qdrant URL uses the service hostname, the same way Redis is `redis` and Phoenix is `phoenix`.
+1. A search port, `search(query) -> list[str]`, built once per process from the same embedding model, URL, and collection name as the ingest script. `AnalyseService` calls it. The mock analyst ignores the text.
+2. Search with the case description. Pass a few chunk texts into `analyse_case` the same way `academic_profile` is passed. Zero hits is an empty string, not a failed run.
+3. A Qdrant or model-load failure is logged and also becomes an empty methodology section, so the profile-only advice still completes. Do not mark the run `FAILED` because retrieval was down.
+4. The prompt may use a chunk only when it bears on the description. `grounded=True` when the profile or a chunk contains facts that bear on the case. Otherwise the generic-advice path stays, with `grounded=False`.
 
 Gate before LangGraph: one Groq trace whose chain input contains a retrieved chunk, and one description that matches nothing and still finishes `COMPLETED`. A graph is the slice after that, and only if the flow needs a branch this single call cannot express.
 
@@ -92,7 +95,7 @@ Gate before LangGraph: one Groq trace whose chain input contains a retrieved chu
 - Log structured events: a stable event name plus keyword fields.
 - He manages git. Do not stage, commit, branch, or push unless he asks.
 - Prefix shell commands with `rtk`.
-- Docker is Postgres, Redis, Phoenix, the API, and the worker. Inside Compose, Redis is `redis:6379` and Phoenix is `http://phoenix:6006`. arq must use `RedisSettings.from_dsn(get_settings().redis_url)`. Bare `RedisSettings()` points at `localhost` and fails in that container. Settings imports are `from app.core.config import get_settings`.
+- Docker is Postgres, Redis, Phoenix, Qdrant, the API, and the worker. Inside Compose, Redis is `redis:6379`, Phoenix is `http://phoenix:6006`, and Qdrant is `http://qdrant:6333`. arq must use `RedisSettings.from_dsn(get_settings().redis_url)`. Bare `RedisSettings()` points at `localhost` and fails in that container. Settings imports are `from app.core.config import get_settings`.
 
 ## Review checklist for a model call
 

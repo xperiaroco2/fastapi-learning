@@ -5,18 +5,18 @@ from langchain_core.runnables import RunnableConfig
 from langchain_groq import ChatGroq
 from pydantic import SecretStr
 
+from app.ai.chat.abc import AIChat, CaseAnalysisResult
 from app.ai.helpers import handle_llm_errors
 from app.ai.prompts import case_analysis_prompt
-from app.ai.provider import AIProvider, CaseAnalysisResult
 
 
-class GroqAIProvider(AIProvider):
+class GroqAIChat(AIChat):
     def __init__(self, api_key: SecretStr, model: str):
         self.llm = ChatGroq(api_key=api_key, model=model, temperature=0.3)
 
     @handle_llm_errors
     async def analyse_case(
-        self, description: str, academic_profile: str, run_id: UUID, user_id: UUID
+        self, description: str, academic_profile: str, run_id: UUID, user_id: UUID, documents_info: list[str]
     ) -> CaseAnalysisResult:
         config: RunnableConfig = {
             "metadata": {
@@ -35,6 +35,7 @@ class GroqAIProvider(AIProvider):
         result = await chain.ainvoke(
             {
                 "description": description,
+                "related_info": "\n\n".join(documents_info),
                 "academic_profile": academic_profile,
             },
             config=config,

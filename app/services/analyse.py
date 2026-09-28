@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from app.ai.factory import get_ai_provider
+from app.ai.factory import get_ai_chat, get_ai_retrieval
 from app.core.constants import CaseStatus
 from app.core.exceptions import AnalyseFailedError
 from app.core.logger import logger
@@ -16,7 +16,8 @@ from app.models.run import AnalysisRun
 class AnalyseService:
     def __init__(self, db: AsyncSession):
         self.db = db
-        self.ai_provider = get_ai_provider()
+        self.ai_retrieval = get_ai_retrieval()
+        self.ai_chat = get_ai_chat()
 
     async def analyse_case_run(self, run_id: UUID, user_id: UUID):
         stmt = (
@@ -36,11 +37,13 @@ class AnalyseService:
         await self.db.refresh(run)
 
         try:
-            result = await self.ai_provider.analyse_case(
+            documents_info = await self.ai_retrieval.search(query=run.case.description)
+            result = await self.ai_chat.analyse_case(
                 description=run.case.description,
                 academic_profile=run.case.student.academic_profile or "",
                 run_id=run_id,
                 user_id=user_id,
+                documents_info=documents_info,
             )
         except AnalyseFailedError as exc:
             run.status = CaseStatus.FAILED

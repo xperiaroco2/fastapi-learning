@@ -1,34 +1,32 @@
+import asyncio
 import os
 from datetime import datetime
-import asyncio
 from pathlib import Path
+from typing import cast
 
 from dotenv import load_dotenv
-from llama_cloud import AsyncLlamaCloud
-
-from langchain_text_splitters import MarkdownTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_qdrant import QdrantVectorStore
+from langchain_text_splitters import MarkdownTextSplitter
+from llama_cloud import AsyncLlamaCloud
+from llama_cloud.types.parsing_get_response import MarkdownPageMarkdownResultPage
 
 load_dotenv()
 
-print('Loading local embeddings...')
+print("Loading local embeddings...")
 
-embeddings = HuggingFaceEmbeddings(
-    model_name="sentence-transformers/all-MiniLM-L6-v2"
-)
+embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
 qdrant_url = os.getenv("VECTOR_DATABASE_URL")
 collection_name = "my_knowledge"
 
 vector_store = QdrantVectorStore.from_existing_collection(
-    embedding=embeddings,
-    collection_name=collection_name,
-    url=qdrant_url
+    embedding=embeddings, collection_name=collection_name, url=qdrant_url
 )
 
 CONCURRENCY_LIMIT = 5
 semaphore = asyncio.Semaphore(CONCURRENCY_LIMIT)
+
 
 async def parse_pdf(path: str, filename: str):
     async with semaphore:
@@ -45,44 +43,42 @@ async def parse_pdf(path: str, filename: str):
             )
 
             result = await client.parsing.parse(
-                tier="cost_effective",
-                version="latest",
-                file_id=file_response.id,
-                expand=['markdown']
+                tier="cost_effective", version="latest", file_id=file_response.id, expand=["markdown"]
             )
 
-            full_text = '\n\n'.join([page.markdown for page in result.markdown.pages])
+            assert result.markdown is not None
+
+            full_text = "\n\n".join(
+                [cast(MarkdownPageMarkdownResultPage, page).markdown for page in result.markdown.pages]
+            )
             base_metadata = {
                 "source_file": filename,
                 "ingested_at": datetime.now().isoformat(),
-                "category": "education"
+                "category": "education",
             }
 
-            print(f'[{filename}]: Making chunks...')
+            print(f"[{filename}]: Making chunks...")
 
-            splitter = MarkdownTextSplitter(
-                chunk_size=1000,
-                chunk_overlap=200
-            )
+            splitter = MarkdownTextSplitter(chunk_size=1000, chunk_overlap=200)
 
             chunks = splitter.create_documents([full_text], metadatas=[base_metadata])
 
             print(f"[{filename}]: Made {len(chunks)} chunks.")
 
             for idx, chunk in enumerate(chunks):
-                chunk.metadata['chunk_id'] = idx
+                chunk.metadata["chunk_id"] = idx
 
-            print(f'[{filename}]: Sending to Qdrant...')
+            print(f"[{filename}]: Sending to Qdrant...")
 
             await vector_store.aadd_documents(chunks)
 
-            print(f'[{filename}]: Success!')
+            print(f"[{filename}]: Success!")
         except Exception:
-            print(f'[{filename}]: Error while processing file')
+            print(f"[{filename}]: Error while processing file")
 
 
 async def parse_all_pdfs_in_dir():
-    tasks = [parse_pdf(f"data/samples/{pdf_path}", pdf_path) for pdf_path in os.listdir('data/samples/')]
+    tasks = [parse_pdf(f"data/samples/{pdf_path}", pdf_path) for pdf_path in os.listdir("data/samples/")]
 
     await asyncio.gather(*tasks)
 

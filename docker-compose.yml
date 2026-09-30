@@ -62,6 +62,8 @@ services:
     container_name: qdrant
     ports:
       - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
     env_file:
       - .env
       - .env.docker
@@ -78,7 +80,6 @@ services:
       - "8000:8000"
     volumes:
       - .:/app
-      - /app/.venv
     env_file:
       - .env
       - .env.docker
@@ -87,6 +88,12 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
     restart: unless-stopped
     deploy:
       resources:
@@ -102,7 +109,6 @@ services:
     command: [ "watchfiles", "arq app.worker.settings.WorkerSettings", "/app" ]
     volumes:
       - .:/app
-      - /app/.venv
     healthcheck:
       test: [ "NONE" ]
     env_file:
@@ -121,3 +127,4 @@ services:
 
 volumes:
   postgres_data:
+  qdrant_data:

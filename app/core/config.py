@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     phoenix_collector_endpoint: str
 
     vector_database_url: str
+    qdrant_collection_name: str
+    embedding_model: str
+
+    retrieval_score_threshold: float = 0.85
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

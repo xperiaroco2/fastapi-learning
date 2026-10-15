@@ -6,7 +6,7 @@ from app.ai.retrieval.abc import AIRetrieval
 from app.core.config import get_settings
 from app.core.logger import logger
 
-collection_name = "my_knowledge"
+collection_name = get_settings().qdrant_collection_name
 embeddings: HuggingFaceEmbeddings
 client: QdrantClient
 db: QdrantVectorStore | None = None
@@ -17,7 +17,9 @@ def init_db():
     global client
     global db
 
-    embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+    embeddings = HuggingFaceEmbeddings(
+        model_name=get_settings().embedding_model, query_encode_kwargs={"prompt": "query: "}
+    )
     client = QdrantClient(url=get_settings().vector_database_url)
     db = QdrantVectorStore(client=client, collection_name=collection_name, embedding=embeddings)
 
@@ -30,7 +32,7 @@ class QdrantAIRetrieval(AIRetrieval):
 
             assert db is not None
 
-            result = await db.asimilarity_search(query, 5)
+            result = await db.asimilarity_search(query, 5, score_threshold=get_settings().retrieval_score_threshold)
         except Exception:
             logger.exception("retrieval_failed")
             return []

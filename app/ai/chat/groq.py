@@ -30,7 +30,7 @@ class GroqAIChat(AIChat):
             [("system", case_analysis_prompt.system), ("user", case_analysis_prompt.user)]
         )
 
-        chain = prompt | self.llm.with_structured_output(CaseAnalysisResult)
+        chain = prompt | self.llm.with_structured_output(CaseAnalysisResult, method="json_schema", strict=True)
 
         result = await chain.ainvoke(
             {
@@ -41,4 +41,6 @@ class GroqAIChat(AIChat):
             config=config,
         )
 
-        return CaseAnalysisResult.model_validate(result)
+        assert isinstance(result, CaseAnalysisResult)
+
+        return result

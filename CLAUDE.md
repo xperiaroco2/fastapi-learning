@@ -82,7 +82,7 @@ Settings in use (`app/core/config.py`): `ai_provider`, `ai_retrieval`, `groq_api
 
 `handle_llm_errors` maps failures to `AnalyseFailedError` reasons: `invalid_output`, `unavailable`, `rejected`, `unknown_error`. The service stores that reason on `run.error` and logs it with `logger.exception` inside the `except`. A missing run is `invalid_run` and is raised before there is a row to mark `FAILED`. Any exception that escapes `search` or the service outside these paths leaves the run stuck in `PROCESSING` (and rerun answers 409), so adapter code must keep its fallible lines inside its `try`.
 
-`QdrantAIRetrieval.search` returns up to 5 chunk texts above the threshold, or `[]` on no hits or on any Qdrant or model failure (logged as `retrieval_failed`). `GroqAIChat` picks the student prompt when `academic_profile is not None`, else the default prompt (`app/ai/prompts.py`). Retrieved chunks go into the `related_info` slot.
+`QdrantAIRetrieval.search` returns up to 5 chunk texts above the threshold, or `[]` on no hits or on any Qdrant or model failure (logged as `retrieval_failed`). `GroqAIChat` uses one prompt, `case_analysis_prompt` (`app/ai/prompts.py`). The service passes `academic_profile or ""`, so `AIChat` takes a `str` and a missing profile never renders as `None`; the prompt itself handles an empty profile. Retrieved chunks go into the `related_info` slot. `GroqAIChat` calls `with_structured_output(CaseAnalysisResult, method="json_schema", strict=True)` and narrows the result with `isinstance`. The prompt requires Ukrainian, 3–5 unnumbered steps, a hypothesis about the cause, and `grounded=True` only when a profile fact or chunk explains the student's problem; a description with no student problem gets `grounded=False` and steps asking the teacher to clarify.
 
 Phoenix auto-instrumentation traces LangChain calls in the worker. A mock run produces no span. `run_id` and `user_id` go into LangChain metadata as strings.
 
@@ -92,7 +92,7 @@ Phoenix auto-instrumentation traces LangChain calls in the worker. A mock run pr
 - Search with the case description. Zero relevant hits is an empty methodology section, not a failed run.
 - A Qdrant or model-load failure is logged and also becomes an empty section, so profile-only advice still completes. Never mark a run `FAILED` because retrieval was down.
 - The prompt may use a chunk only when it bears on the description. `grounded=True` when the profile or a chunk contains facts that bear on the case; otherwise generic advice with `grounded=False`.
-- Groq structured output: `method="json_schema", strict=True` uses constrained decoding. LangChain adds every field to `required` and sets `additionalProperties: false` itself. If the model is not in langchain-groq's strict list, `strict` is dropped silently.
+- Groq structured output: `method="json_schema", strict=True`. LangChain adds every field to `required` and sets `additionalProperties: false` itself. If the model is not in langchain-groq's strict list, `strict` is dropped silently. With `openai/gpt-oss-20b` this is not a guarantee: Groq validates the finished JSON and returns 400 `json_validate_failed` (observed: `maxItems` exceeded, `grounded` missing; 2 of 12 runs). The prompt still has to state the constraints, and the error path has to expect that 400.
 
 ## Repo conventions
 

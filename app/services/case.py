@@ -66,6 +66,8 @@ class CaseService:
 
         await self.queue.enqueue_analyze_case(run_id=case_run.id, user_id=user_id)
 
+        case = await self.get_by_id(case.id, user_id)
+
         return case
 
     async def rerun(self, case_id: UUID, user_id: UUID) -> UUID:

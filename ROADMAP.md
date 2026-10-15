@@ -7,9 +7,9 @@
 - Крок відмічається `[x]` тільки після перевірки на диску або в запущеному стеку, а не зі слів.
 - Після кожного кроку оновлюється рядок «Наступна дія» і дата.
 
-**Останнє оновлення:** 2026-10-15 (перевірка перед переїздом)
+**Останнє оновлення:** 2026-10-15 (gate Slice #1 пройдено, ревʼю чисте)
 
-**Наступна дія:** перенести роботу на ноутбук (розділ нижче), потім крок 1.6 (strict-вивід Groq).
+**Наступна дія:** 1.8 (Дмитро комітить slice), потім вибір наступного slice: #2 (ownership) чи #3 (LangGraph). На ноутбуці ще: `score_probe.py`, скопіювати `data/parsed/`.
 
 ---
 
@@ -18,16 +18,16 @@
 На цьому ПК:
 - [x] Зафіксувати версію Qdrant у `docker-compose.yml`: `qdrant/qdrant:v1.19.1`
 - [x] Зробити snapshot колекції `my_knowledge_e5` і завантажити файл: `data/snapshots/e5.snapshot`, 78 МБ, sha256 збігається з Qdrant (`38ec6507…`). Переносити руками, не через git
-- [ ] Закомітити й запушити всі зміни (`qdrant.py`, `config.py`, `ingest_parsed.py`, `ingest_raw.py`, `score_probe.py`, `docker-compose.yml`, `CLAUDE.md`, `ROADMAP.md`)
-- [ ] Скопіювати `.env` безпечним шляхом (флешка або менеджер паролів; не git, не чат)
+- [x] Закомітити й запушити всі зміни (`qdrant.py`, `config.py`, `ingest_parsed.py`, `ingest_raw.py`, `score_probe.py`, `docker-compose.yml`, `CLAUDE.md`, `ROADMAP.md`)
+- [x] Скопіювати `.env` безпечним шляхом (флешка або менеджер паролів; не git, не чат)
 - [ ] Скопіювати `data/parsed/` (14 МБ, 145 `.md` + `_manifest.json`) і файл snapshot. `data/parsed` — єдина копія платного парсингу
 
 На ноутбуці:
-- [ ] `git clone` / `git pull`, покласти `.env` і `data/parsed/` на місце
-- [ ] `docker compose up -d --build`
+- [ ] `git clone` / `git pull`, покласти `.env` і `data/parsed/` на місце (код і `.env` є, `data/parsed/` ще немає)
+- [x] `docker compose up -d --build`: усі сервіси running, `/health` ok, Alembic `925e46e3d2df`
 - [ ] `uv sync`
-- [ ] Відновити колекцію зі snapshot (Qdrant API: upload snapshot). Має бути 13 335 точок у `my_knowledge_e5`. Запасний варіант: переіндексувати з `data/parsed` (~20–25 хв)
-- [ ] Зареєструвати юзера, створити учня (Postgres на ноутбуці порожній)
+- [x] Відновити колекцію зі snapshot (Qdrant API: upload snapshot). Має бути 13 335 точок у `my_knowledge_e5`. Запасний варіант: переіндексувати з `data/parsed` (~20–25 хв). Перевірено: count 13 335, 384 dims, Cosine
+- [x] Зареєструвати юзера, створити учня (Postgres на ноутбуці порожній)
 - [ ] Перевірити: `score_probe.py` → борщ 0 результатів, домашка 5
 
 ---
@@ -43,8 +43,10 @@
 - [x] **1.3** Модель `intfloat/multilingual-e5-small` з префіксами `passage: ` (ingest) і `query: ` (`qdrant.py`); повна переіндексація: 13 335 точок у `my_knowledge_e5`
 - [x] **1.4** Замір score (`scripts/score_probe.py`): релевантні ≥ ~0.862, не на тему ≤ 0.836 (сирий cosine). Пастка: `similarity_search_with_relevance_scores` перераховує score як `(1 + s) / 2`
 - [x] **1.5** Поріг `retrieval_score_threshold = 0.85` у `Settings`, `asimilarity_search(..., score_threshold=...)`. Перевірено у воркері: домашка → 5 чанків, борщ → 0
-- [ ] **1.6** `groq.py`: `with_structured_output(..., method="json_schema", strict=True)`. `prompts.py`: правило «3–5 кроків, без нумерації, гіпотеза про учня». Готово, коли 5 runs поспіль `COMPLETED` без `tool_use_failed`
-- [ ] **1.7** Gate: два traces у Phoenix, потім ревʼю. Після чистого ревʼю Claude закриває slice тут і в `CLAUDE.md`
+- [x] **1.6** `groq.py`: `with_structured_output(..., method="json_schema", strict=True)`. `prompts.py`: правило «3–5 кроків, без нумерації, гіпотеза про учня». Готово, коли 5 runs поспіль `COMPLETED` без `tool_use_failed`. Перевірено: 7 з 8 runs `COMPLETED`, останні 5 поспіль; у кожному Phoenix span `strict: true`; нумерації в кроках немає. 1 run `FAILED` (`json_validate_failed`, `maxItems: got 6`), див. «Борг»
+- [x] **1.7** Gate: два traces у Phoenix, потім ревʼю. Після чистого ревʼю Claude закриває slice тут і в `CLAUDE.md`
+  - Trace 1 є: run `6333293f`, 7 чанків про увагу й математику в `related_info`. Відповідь була англійською; після правила «Відповідай виключно українською» run `d0a1cf0a` українською
+  - Trace 2: Run `93a77be1` (борщ, учень із профілем): `FAILED`, `json_validate_failed` (`missing properties: grounded`). У `failed_generation` модель привʼязала борщ до дробів із профілю: план «рахувати дроби в рецепті борщу». Після правила «`grounded=True` лише коли факт пояснює проблему учня» run `7f90bfcb`: `COMPLETED`, `grounded=f`, 0 чанків, гіпотеза «у описі немає проблеми учня». Але `action_plan` — рецепт борщу (знахідка ревʼю). Після правила про кроки-уточнення run `65c611f7`: `COMPLETED`, `grounded=f`, 3 кроки «уточнити, хто учень / яка проблема / як давно». Ревʼю чисте: `ruff` ok, `pyright` 0 errors, решта знахідок у «Борг»
 - [ ] **1.8** Закомітити slice
 
 Відомі обмеження (не блокують gate): у корпусі мало документів про булінг і мовну адаптацію; частина чанків — HTML-таблиці й списки прізвищ, і такі чанки можуть пройти поріг. Від них захищає правило в prompt «використовуй чанк, тільки якщо він стосується кейсу».
@@ -53,13 +55,16 @@
 
 ## Борг (не блокує gate, робиться пізніше)
 
-- [ ] `groq.BadRequestError` (`tool_use_failed`) у `handle_llm_errors` → правильна причина замість `unknown_error`
+- [ ] `groq.BadRequestError` (`tool_use_failed`, `json_validate_failed`) у `handle_llm_errors` → правильна причина замість `unknown_error`. Strict-режим Groq не обмежує `maxItems` під час генерації, а перевіряє вже готовий JSON: 1 з 8 runs повернув 6 кроків (шостий `""`) → 400 → `unknown_error`. Потім ще 1: відсутній `grounded` (`required`). Разом 2 з 11. Рішення: зараз мапінг в `invalid_output` (щоб рахувати частоту), retry — циклом у Slice #3
 - [ ] Завантаження моделі embeddings винести з event loop (arq `on_startup` або `asyncio.to_thread`)
 - [ ] Retriever span у Phoenix з `run_id`; `run_id` у логах `retrieval_failed` і `analysis_success`
-- [ ] Чанки в prompt з роздільниками й `source_file`; не рендерити `None` у prompt; злити два system prompt-и
+- [ ] Чанки в prompt з роздільниками й `source_file`
+- [x] Один system prompt; `None` не рендериться (сервіс передає `academic_profile or ""`, `analyse.py:43`)
 - [ ] `datetime.now(UTC)`; заповнювати `started_at`, `execution_time_ms`, `tokens_used`
 - [x] Ingest розділено на `ingest_parsed.py` (index з `data/parsed`) і `ingest_raw.py` (LlamaParse)
 - [ ] `ingest_raw.py`: перевірка `.endswith(".md")` на `:34` відкидає всі PDF, тож скрипт нічого не робить. І він має зберігати `.md` + запис у `_manifest.json` у `data/parsed`, а не індексувати напряму (інакше платний парсинг знову живе тільки в Qdrant)
+- [ ] Опис без проблеми учня (борщ) проходить як кейс; prompt лише чесно каже про це в `hypothesis`. Справжнє рішення: router «кейс / не кейс» у Slice #3
+- [ ] `temperature=0.3` захардкоджено в `groq.py`; перенести в settings
 - [ ] `.env.example` з усіма змінними без секретів
 - [ ] 174 PDF у `data/raw` ніколи не парсились (безкоштовно: `pymupdf4llm`)
 - [ ] Phoenix `project_name="my-llm-app"` → назва проєкту
@@ -80,6 +85,7 @@
 - **Проблема:** вчителі ставлять питання, які не є кейсами; для уточнень потрібна памʼять.
 - **Інструмент:** LangGraph: router (кейс чи питання), гілка питань із цитатами й чесним «не знайдено», checkpointer memory.
 - **Scope:** спочатку одне питання, потім памʼять. Без UI.
+- **Після шляху питань:** цикл самовиправлення для `analyse_case` (вузол `validate` повертає моделі текст помилки, ліміт спроб). Аргумент: частка `invalid_output` до і після циклу. Простий retry — це `with_retry`, LangGraph для нього не потрібен
 
 ### Slice #4. Neo4j
 - **Проблема:** накази МОН змінюють і скасовують один одного; retrieval повертає нечинні документи.
